@@ -1,11 +1,26 @@
 import { defineHook } from "@directus/extensions-sdk";
 import { TransformationParams, TransformationSet, TransformationFormat, AbstractServiceOptions } from "@directus/types";
 
+type FitMode = "contain" | "cover" | "fill" | "inside" | "outside";
+
 export default defineHook(({ action }, { services, env }) => {
     const { AssetsService, FilesService } = services;
-    const envQuality: number = env.EXTENSIONS_REDUCE_ON_UPLOAD_QUALITY || 50;
-    const envMaxSize: number = env.EXTENSIONS_REDUCE_ON_UPLOAD_MAXSIZE || 4096;
-    const envTargetFormat: TransformationFormat = env.EXTENSIONS_REDUCE_ON_UPLOAD_TARGET_FORMAT || "avif";
+
+    const envQuality: number = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_QUALITY ?? 50;
+
+    // Width and height are independent.
+    //   - Both set:    sharp combines them via `fit` (see envFit below).
+    //   - Only one:    sharp auto-scales the other to preserve aspect ratio.
+    //   - Both unset:  resize is skipped — only re-encode/compress runs.
+    // See https://sharp.pixelplumbing.com/api-resize/
+    const envMaxWidth: number | null = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_MAX_WIDTH ?? null;
+    const envMaxHeight: number | null = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_MAX_HEIGHT ?? null;
+    const rawFit: string = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_FIT ?? "inside";
+    const envFit: FitMode = isValidFit(rawFit) ? rawFit : "inside";
+    const envWithoutEnlargement: boolean = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_WITHOUT_ENLARGEMENT ?? true;
+
+    const envTargetFormat: TransformationFormat = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_TARGET_FORMAT ?? "avif";
+    const envMaxAttempts: number = env.EXTENSIONS_TRANSFORM_ON_UPLOAD_MAX_ATTEMPTS ?? 10;
 
     function isImage(value: string): value is "image" {
         return value === "image";
@@ -13,6 +28,10 @@ export default defineHook(({ action }, { services, env }) => {
 
     function isValidTransformationFormat(value: string): value is TransformationFormat {
         return ["jpg", "jpeg", "png", "webp", "tiff", "avif"].includes(value);
+    }
+
+    function isValidFit(value: string): value is FitMode {
+        return ["contain", "cover", "fill", "inside", "outside"].includes(value);
     }
 
     // Alternative to "path.parse(str).name"
@@ -24,7 +43,7 @@ export default defineHook(({ action }, { services, env }) => {
 
     // Storage adapters may not have flushed the upload yet when this hook fires;
     // retry getAsset with linear backoff until the bytes are readable.
-    async function waitForAsset(assetsService: any, key: string, transformationSet: TransformationSet, maxAttempts = 10, delayMs = 1000) {
+    async function waitForAsset(assetsService: any, key: string, transformationSet: TransformationSet, maxAttempts = envMaxAttempts, delayMs = 1000) {
         for (let i = 0; i < maxAttempts; i++) {
             try {
                 return await assetsService.getAsset(key, transformationSet);
@@ -45,10 +64,10 @@ export default defineHook(({ action }, { services, env }) => {
         const transformationParams: TransformationParams = {
             format: envTargetFormat,
             quality: envQuality,
-            width: envMaxSize,
-            height: envMaxSize,
-            fit: "inside",
-            withoutEnlargement: true,
+            width: envMaxWidth,
+            height: envMaxHeight,
+            fit: envFit,
+            withoutEnlargement: envWithoutEnlargement,
         };
 
         const transformationSet: TransformationSet = {

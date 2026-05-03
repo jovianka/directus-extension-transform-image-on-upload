@@ -1,8 +1,9 @@
 {
-	"name": "directus-extension-optimize-image-on-upload",
-	"description": "Please enter a description for your extension",
+	"name": "directus-extension-transform-image-on-upload",
+	"description": "Directus hook extension for image optimization using directus's AssetsService",
 	"icon": "extension",
 	"version": "1.0.0",
+	"license": "MIT",
 	"keywords": [
 		"directus",
 		"directus-extension",
@@ -16,7 +17,7 @@
 		"type": "hook",
 		"path": "dist/index.js",
 		"source": "src/index.ts",
-		"host": "^10.10.0"
+		"host": "^11.17.4"
 	},
 	"scripts": {
 		"build": "directus-extension build",
