@@ -4,6 +4,10 @@
 	"icon": "extension",
 	"version": "1.0.0",
 	"license": "MIT",
+	"author": {
+		"email": "jeanjacketz@protonmail.com",
+		"name": "jeanjacketz"
+	},
 	"keywords": [
 		"directus",
 		"directus-extension",
