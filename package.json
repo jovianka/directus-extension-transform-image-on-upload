@@ -2,7 +2,7 @@
 	"name": "directus-extension-transform-image-on-upload",
 	"description": "Directus hook extension for image optimization using directus's AssetsService",
 	"icon": "extension",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"license": "MIT",
 	"author": {
 		"email": "jeanjacketz@protonmail.com",
